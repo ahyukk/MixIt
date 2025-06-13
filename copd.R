@@ -11,7 +11,7 @@
 ## [2] Im, Yunjoo, et al. "Causal inference analysis of the radiologic progression in the chronic obstructive pulmonary disease." Scientific Reports 14.1 (2024): 17838.
 ##
 ##
-## Last Updated: 06/02/2025
+## Last Updated: 06/13/2025
 
 
 ###########
@@ -54,6 +54,37 @@ smc <- data.smc %>% dplyr::select(age, bmi, smk, Emph, interval, Emph_outcome, t
   mutate(Emph_change = Emph_outcome - Emph)  # Emph_change = change of emphysema progression over time
 
 n <- dim(smc)[1]
+
+
+##############
+## Motivation
+##############
+
+## OVL Diagnosis: PS Modeling approach
+ps.fit <- glm(treated ~ age + bmi + smk + Emph + interval, data = smc, family = "binomial")
+smc$ps <- ps.fit$fitted.values
+smc %>% ggplot(aes(x = ps, fill = treated)) + geom_histogram(alpha = 0.5) + theme_minimal()
+
+## OVL Diagnosis: Weight dispersion approach
+# 1. PS logistic modeling
+ps.fit <- weightit(treated ~ age + bmi + smk + Emph + interval, data = smc, estimand = "ATT", method = "glm")
+summary(ps.fit)
+quantile(ps.fit$weights, 0.99)
+sd(ps.fit$weights[smc$treated == FALSE]/sum(ps.fit$weights[smc$treated == FALSE]))
+# Max Weight: 1.532 
+# 99%: 1.122
+# ESS: 36.2 
+# SD of normalized weights: 0.0137
+
+# 2. Entropy Balancing
+ebal.fit <- weightit(treated ~ age + bmi + smk + Emph + interval, data = smc, estimand = "ATT", method = "ebal")
+summary(ebal.fit)
+quantile(ebal.fit$weights, 0.99)
+sd(ebal.fit$weights[smc$treated == FALSE]/sum(ebal.fit$weights[smc$treated == FALSE]))
+# Max Weight: 5.1213 
+# 99%: 3.274 
+# ESS: 37.89 
+# SD of normalized weights: 0.0129 
 
 
 ################################
@@ -265,7 +296,7 @@ smc.boot.mat %>% apply(1, function(x) sum(is.na(x)))
 save(smc.boot.mat, file = "smc.boot.mat.RData")
 load(file = "smc.boot.mat.RData")
 
-se.df <- data.frame(value = smc3.boot.mat %>% apply(1, function(x) sd(x, na.rm = TRUE)),
+se.df <- data.frame(value = smc.boot.mat %>% apply(1, function(x) sd(x, na.rm = TRUE)),
                     model = rep(c("model2", "model0"), each = 20),
                     delta = rep(seq(0, 0.9, by = 0.1), times = 4),
                     Estimator = rep(c("IPW", rep("MIPW", 9), "EB", rep("MEB", 9)), times = 2))
@@ -348,7 +379,7 @@ smc.delta.weight.list <- delta.seq %>% lapply(function(d) {
         weightit(mod0, data = m.data, method = "ebal", estimand = "ATT")
       )
     )
-    weight.mat[Z == 0, 4] = (eb.fit2$weights[Z == 0] - d * (n.t/n.c)) / (1 - d)
+    weight.mat[Z == 0, 4] = (eb.fit$weights[Z == 0] - d * (n.t/n.c)) / (1 - d)
     
     colnames(weight.mat) <- c("MIPW.2", "MEB.2", "MIPW.0", "MEB.0")
     
@@ -377,3 +408,25 @@ delta.bal <- seq_along(delta.seq) %>% lapply(function(d) {
 
 bal.smc <- bal.smc %>% cbind(Reduce(cbind, delta.bal))
 bal.smc
+
+
+# 4. OVL Diagnosis: Weight Dispersion
+
+# 4.1 Inverse Prob. Weighting -- mod2
+glm.fit <- weightit(treated ~ age + bmi + smk + Emph + interval + smk*Emph, data = smc, estimand = "ATT", method = "glm")
+summary(glm.fit)
+quantile(glm.fit$weights, 0.99)
+sd(glm.fit$weights[smc$treated == FALSE]/sum(glm.fit$weights[smc$treated == FALSE]))
+
+# 4.2 Entropy Balancing -- mod2
+ebal.fit <- weightit(treated ~ age + bmi + smk + Emph + interval + smk*Emph, data = smc, estimand = "ATT", method = "ebal")
+summary(ebal.fit)
+quantile(ebal.fit$weights, 0.99)
+sd(ebal.fit$weights[smc$treated == FALSE]/sum(ebal.fit$weights[smc$treated == FALSE]))
+
+
+# 4.3 Mixed Entropy Balancing (0.1) -- mod2
+bal.tab(X, treat = Z, weights = smc.delta.weight.list[[1]][,2])
+max(smc.delta.weight.list[[1]][Z == 0,2])
+quantile(smc.delta.weight.list[[1]][Z == 0,2], 0.99)
+sd(smc.delta.weight.list[[1]][Z == 0,2]/sum(smc.delta.weight.list[[1]][Z == 0,2]))
