@@ -45,11 +45,11 @@ mixit(
 
 | Argument  | Purpose                                                                              | Details / default                                                                                                               |
 | --------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| `formula` | Defines the treatment indicator and baseline covariates.                             | Standard R formula, e.g. `treated ~ age + bmi + smk`.                                                                           |
+| `formula` | Defines the treatment indicator and baseline covariates.                             | Standard R formula, e.g. `treated ~ age + bmi + smk + Emph + interval`.                                                                           |
 | `outcome` | Column name of the observed outcome `Y`.                                             | Character scalar.                                                                                                               |
 | `data`    | Original sample. Must contain `outcome`, treatment, and all covariates.              | `data.frame` or tibble.                                                                                                         |
 | `delta`   | Mixing proportion $\delta\in(0,1)$.                                                  | $\delta=0$ ⇒ no mixing; larger $\delta$ ⇒ more controls mixed into the treated group.                                           |
-| `by`      | Implementation route.                                                                | `"M-estimation"` (influence-function / sandwich variance) or `"Algorithm"` (Monte-Carlo mixing).                                |
+| `by`      | Implementation route.                                                                | `"M-estimation"` or `"Algorithm"`                                |
 | `weight`  | Weighting method for `"Algorithm"`.                                                  | `"glm"` (propensity GLM), `"ebal"` (entropy balancing), or `"CBPS"` (covariate-balancing PS). Ignored if `by = "M-estimation"`. |
 | `M`       | Number of resampled mixed datasets when `by = "Algorithm"`.                          | Integer ≥ 1, default `200`.                                                                                                     |
 | `...`     | Extra arguments forwarded to `weightit()` (for `"ebal"`) or `CBPS()` (for `"CBPS"`). |                                                                                                                                 |
