@@ -13,7 +13,6 @@ In observational studies, the assumption of sufficient overlap (positivity) is f
 | sim2.R | The simulation study of section 4.2 in the main paper |
 | copd.R | The real data analysis of section 5 in the main paper |
 | adv_mix.R | The simulation study of section 6.1 in the main paper |
-| data.R | The COPD dataset from Samsung Medical Center |
 | smc.boot.mat.RData | The bootstrap estimates of the COPD study |
 
 ### Simple Mixing Strategy
